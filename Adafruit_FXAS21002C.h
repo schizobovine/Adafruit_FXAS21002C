@@ -110,6 +110,8 @@ class Adafruit_FXAS21002C : public Adafruit_Sensor
     bool begin           ( gyroRange_t rng = GYRO_RANGE_250DPS );
     bool getEvent        ( sensors_event_t* event);
     void getSensor       ( sensor_t* sensor);
+    bool updateRaw       ();
+    void getLastData     (float *x, float *y, float *z, bool radians);
 
     /*! Raw gyroscope values from last sensor read */
     gyroRawData_t raw;

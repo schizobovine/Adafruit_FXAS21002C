@@ -309,6 +309,102 @@ bool Adafruit_FXAS21002C::getEvent(sensors_event_t* event)
 
 /**************************************************************************/
 /*!
+    @brief  Updates internal raw data structure.
+
+    @param[out] event
+                A reference to the sensors_event_t instances where the
+                accelerometer data should be written.
+
+     @return True if the event was successfully read, otherwise false.
+*/
+/**************************************************************************/
+bool Adafruit_FXAS21002C::updateRaw()
+{
+
+  /* Clear the raw data placeholder */
+  raw.x = 0;
+  raw.y = 0;
+  raw.z = 0;
+
+  /* Read 7 bytes from the sensor */
+  Wire.beginTransmission((byte)FXAS21002C_ADDRESS);
+  #if ARDUINO >= 100
+    Wire.write(GYRO_REGISTER_STATUS | 0x80);
+  #else
+    Wire.send(GYRO_REGISTER_STATUS | 0x80);
+  #endif
+  Wire.endTransmission();
+  Wire.requestFrom((byte)FXAS21002C_ADDRESS, (byte)7);
+
+  #if ARDUINO >= 100
+    uint8_t status = Wire.read();
+    uint8_t xhi = Wire.read();
+    uint8_t xlo = Wire.read();
+    uint8_t yhi = Wire.read();
+    uint8_t ylo = Wire.read();
+    uint8_t zhi = Wire.read();
+    uint8_t zlo = Wire.read();
+  #else
+    uint8_t status = Wire.receive();
+    uint8_t xhi = Wire.receive();
+    uint8_t xlo = Wire.receive();
+    uint8_t yhi = Wire.receive();
+    uint8_t ylo = Wire.receive();
+    uint8_t zhi = Wire.receive();
+    uint8_t zlo = Wire.receive();
+  #endif
+
+  raw.x = (int16_t)((xhi << 8) | xlo);
+  raw.y = (int16_t)((yhi << 8) | ylo);
+  raw.z = (int16_t)((zhi << 8) | zlo);
+
+  return true;
+}
+
+void Adafruit_FXAS21002C::getLastData(float *x, float *y, float *z, bool radians=false)
+{
+
+  // Fetch from raw intermediate data structure
+  *x = raw.x;
+  *y = raw.y;
+  *z = raw.z;
+
+  /* Compensate values depending on the resolution */
+  switch(_range)
+  {
+    case GYRO_RANGE_250DPS:
+      *x *= GYRO_SENSITIVITY_250DPS;
+      *y *= GYRO_SENSITIVITY_250DPS;
+      *z *= GYRO_SENSITIVITY_250DPS;
+      break;
+    case GYRO_RANGE_500DPS:
+      *x *= GYRO_SENSITIVITY_500DPS;
+      *y *= GYRO_SENSITIVITY_500DPS;
+      *z *= GYRO_SENSITIVITY_500DPS;
+      break;
+    case GYRO_RANGE_1000DPS:
+      *x *= GYRO_SENSITIVITY_1000DPS;
+      *y *= GYRO_SENSITIVITY_1000DPS;
+      *z *= GYRO_SENSITIVITY_1000DPS;
+      break;
+    case GYRO_RANGE_2000DPS:
+      *x *= GYRO_SENSITIVITY_2000DPS;
+      *y *= GYRO_SENSITIVITY_2000DPS;
+      *z *= GYRO_SENSITIVITY_2000DPS;
+      break;
+  }
+
+  /* Convert values to rad/s */
+  if (radians) {
+    *x *= SENSORS_DPS_TO_RADS;
+    *y *= SENSORS_DPS_TO_RADS;
+    *z *= SENSORS_DPS_TO_RADS;
+  }
+  
+}
+
+/**************************************************************************/
+/*!
     @brief  Gets the sensor_t data
 
     @param[out] sensor
